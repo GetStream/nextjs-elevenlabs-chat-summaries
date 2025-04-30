@@ -12,6 +12,7 @@ import {
 import { ChannelSort, User } from 'stream-chat';
 import 'stream-chat-react/dist/css/v2/index.css';
 import { EmojiPicker } from 'stream-chat-react/emojis';
+import CustomChannelHeader from './CustomChannelHeader';
 
 export default function MyChat({
   apiKey,
@@ -42,6 +43,7 @@ export default function MyChat({
       <Channel EmojiPicker={EmojiPicker}>
         <Window>
           <ChannelHeader />
+          <CustomChannelHeader />
           <MessageList />
           <MessageInput />
         </Window>
