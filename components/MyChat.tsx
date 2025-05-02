@@ -1,18 +1,17 @@
 import {
   Chat,
   Channel,
-  ChannelList,
-  MessageList,
-  MessageInput,
   Thread,
   Window,
   useCreateChatClient,
-  ChannelHeader,
 } from 'stream-chat-react';
 import { ChannelSort, User } from 'stream-chat';
-import 'stream-chat-react/dist/css/v2/index.css';
+import 'stream-chat-react/dist/css/v2/index.layout.css';
 import { EmojiPicker } from 'stream-chat-react/emojis';
+import CustomChannelList from './CustomChannelList';
 import CustomChannelHeader from './CustomChannelHeader';
+import CustomMessageList from './CustomMessageList';
+import CustomMessageInput from './CustomMessageInput';
 
 export default function MyChat({
   apiKey,
@@ -30,7 +29,7 @@ export default function MyChat({
   });
 
   if (!chatClient) {
-    return <div>Error, please try again later.</div>;
+    return <div>Loading Chat...</div>;
   }
 
   const filters = { members: { $in: [user.id] } };
@@ -38,14 +37,13 @@ export default function MyChat({
   const options = { limit: 10 };
 
   return (
-    <Chat client={chatClient} theme='str-chat__theme-light'>
-      <ChannelList filters={filters} sort={sort} options={options} />
+    <Chat client={chatClient}>
+      <CustomChannelList filters={filters} sort={sort} options={options} />
       <Channel EmojiPicker={EmojiPicker}>
         <Window>
-          <ChannelHeader />
           <CustomChannelHeader />
-          <MessageList />
-          <MessageInput />
+          <CustomMessageList />
+          <CustomMessageInput />
         </Window>
         <Thread />
       </Channel>

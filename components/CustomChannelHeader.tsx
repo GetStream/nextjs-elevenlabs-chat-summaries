@@ -1,75 +1,61 @@
 'use client';
 
-import { useSpeech } from '@/app/hooks/use-speech';
-import { TextToSpeechRequest } from 'elevenlabs/api';
-import { ChannelHeaderProps } from 'stream-chat-react';
-import { useState } from 'react';
+import React from 'react';
+import { useChannelStateContext } from 'stream-chat-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Info } from 'lucide-react'; // Example icon
 
-const CustomChannelHeader = (props: ChannelHeaderProps) => {
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
-    null
-  );
+const CustomChannelHeader: React.FC = () => {
+  const { channel } = useChannelStateContext();
+  // const { client } = useChatContext(); // Keep client if needed for other actions
 
-  const {
-    speak,
-    isLoading: isSpeaking,
-    error,
-  } = useSpeech({
-    onError: (errorMessage) => console.error('Speech error:', errorMessage),
-  });
+  // Placeholder: log the client to satisfy linter for now
+  // console.log('Chat client available in header:', client);
 
-  const playAudio = async () => {
-    const requestData: TextToSpeechRequest = {
-      text: 'Hello, how are you?',
-      model_id: 'eleven_multilingual_v2', // Add model ID as recommended in docs
-    };
+  // Function to get initials from name
+  const getInitials = (name: string = '') =>
+    name
+      .split(' ')
+      .map((part) => part[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || '?';
 
-    try {
-      // Use voice ID from Eleven Labs docs
-      const audioUrl = await speak('JBFqnCBsd6RMkjVDRZzb', requestData);
-      console.log('Audio URL:', audioUrl);
+  if (!channel) {
+    return (
+      // Use Shadcn Skeleton later if desired
+      <div className='flex items-center justify-between p-3 border-b'>
+        <div className='h-6 bg-gray-200 rounded w-1/4'></div>
+        <div className='h-8 w-8 bg-gray-200 rounded'></div>
+      </div>
+    );
+  }
 
-      if (audioUrl) {
-        // Create and play the audio
-        if (audioElement) {
-          audioElement.pause();
-          audioElement.src = audioUrl;
-          audioElement.play();
-        } else {
-          const newAudio = new Audio(audioUrl);
-          setAudioElement(newAudio);
-          newAudio.play();
-        }
-      }
-    } catch (err) {
-      console.error('Failed to play audio:', err);
-    }
-  };
+  const channelName = channel.data?.name || 'Unnamed Channel';
+  const memberCount = channel.data?.member_count;
 
   return (
-    <div>
-      <h1>{props.title ?? 'My Channel'}</h1>
-      <button
-        onClick={playAudio}
-        disabled={isSpeaking}
-        style={{ opacity: isSpeaking ? 0.5 : 1 }}
-      >
-        <svg
-          xmlns='http://www.w3.org/2000/svg'
-          fill='none'
-          viewBox='0 0 24 24'
-          strokeWidth={1.5}
-          stroke='currentColor'
-          className='size-6'
-        >
-          <path
-            strokeLinecap='round'
-            strokeLinejoin='round'
-            d='M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z'
-          />
-        </svg>
-      </button>
-      {error && <div style={{ color: 'red', fontSize: '0.8rem' }}>{error}</div>}
+    <div className='flex items-center justify-between p-3 border-b'>
+      <div className='flex items-center space-x-3'>
+        <Avatar className='w-9 h-9'>
+          <AvatarImage src={channel.data?.image as string} alt={channelName} />
+          <AvatarFallback>{getInitials(channelName)}</AvatarFallback>
+        </Avatar>
+        <div className='flex flex-col'>
+          <span className='font-semibold text-sm'>{channelName}</span>
+          {memberCount !== undefined && (
+            <span className='text-xs text-muted-foreground'>
+              {memberCount} {memberCount === 1 ? 'member' : 'members'}
+            </span>
+          )}
+        </div>
+      </div>
+      {/* Replace with actual info button/dropdown functionality */}
+      <Button variant='ghost' size='icon'>
+        <Info className='h-4 w-4' />
+        <span className='sr-only'>Channel Information</span>
+      </Button>
     </div>
   );
 };
