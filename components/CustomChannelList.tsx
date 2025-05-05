@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ChannelPreviewUIComponentProps,
   useChatContext,
@@ -10,8 +10,20 @@ import { cn } from '@/lib/utils';
 import { cva } from 'class-variance-authority'; // For styling variants (e.g., selected)
 import type { ChannelListMessengerProps } from 'stream-chat-react';
 import { DefaultGenerics } from 'stream-chat';
+import { Channel } from 'stream-chat';
 import { useSpeech } from '@/app/hooks/use-speech';
 import { Button } from './ui/button';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { TextToSpeechRequest } from 'elevenlabs/api';
 
 // We'll use the original ChannelList for its logic initially,
 // but provide custom UI components to it.
@@ -142,7 +154,42 @@ export const CustomListContainer = ({
   error,
 }: React.PropsWithChildren<ChannelListMessengerProps>) => {
   const { client } = useChatContext();
+  const { speak } = useSpeech();
+  const [placeholderSummaries, setPlaceholderSummaries] = useState<
+    { channelName: string; summary: string }[]
+  >([]);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
+    null
+  );
   const user = client?.user;
+
+  const playAudio = async (text: string) => {
+    const requestData: TextToSpeechRequest = {
+      text: text,
+      model_id: 'eleven_multilingual_v2', // Add model ID as recommended in docs
+    };
+
+    try {
+      // Use voice ID from Eleven Labs docs
+      const audioUrl = await speak('JBFqnCBsd6RMkjVDRZzb', requestData);
+      console.log('Audio URL:', audioUrl);
+
+      if (audioUrl) {
+        // Create and play the audio
+        if (audioElement) {
+          audioElement.pause();
+          audioElement.src = audioUrl;
+          audioElement.play();
+        } else {
+          const newAudio = new Audio(audioUrl);
+          setAudioElement(newAudio);
+          newAudio.play();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to play audio:', err);
+    }
+  };
 
   if (loading) {
     return <div>Loading...</div>;
@@ -173,12 +220,185 @@ export const CustomListContainer = ({
       </h2>
       <div className='flex items-center justify-center py-4'>
         {unreadMessagesExist && (
-          <Button variant='default' className='cursor-pointer'>
-            Get summary of unread messages
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant='default'
+                className='cursor-pointer'
+                onClick={() => {
+                  const fetchChannelSummaries = async () => {
+                    try {
+                      // Get channels with unread messages
+                      const channelsWithUnread = loadedChannels?.filter(
+                        (channel) =>
+                          channel.state.read[user?.id as string]
+                            ?.unread_messages > 0
+                      );
+
+                      if (!channelsWithUnread?.length) return;
+
+                      // Fetch summaries for each channel
+                      const summaries = await Promise.all(
+                        channelsWithUnread.map(async (channel) => {
+                          console.log(
+                            `Getting summary for ${
+                              channel.data?.name
+                            } with body: ${JSON.stringify({
+                              messages: [
+                                {
+                                  role: 'system',
+                                  content:
+                                    'You are handed messages from a chat channel. Please summarize them and ensure no context misses. If important also name the people involved and what their intentions and/or questions have been.',
+                                },
+                                {
+                                  role: 'user',
+                                  content: `Unread messages: ${getUnreadMessages(
+                                    channel
+                                  )}`,
+                                },
+                              ],
+                            })}`
+                          );
+                          const response = await fetch(
+                            'http://127.0.0.1:1234/v1/chat/completions',
+                            {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                messages: [
+                                  {
+                                    role: 'system',
+                                    content:
+                                      'You are handed messages from a chat channel. Please summarize them in 2 sentences and ensure there is no missing information. Respond only with the summary that is relevant to the user and no boilerplate.',
+                                  },
+                                  {
+                                    role: 'user',
+                                    content: `Unread messages: ${getUnreadMessages(
+                                      channel
+                                    )}`,
+                                  },
+                                ],
+                                response_format: {
+                                  type: 'json_schema',
+                                  json_schema: {
+                                    name: 'summary_response',
+                                    strict: 'true',
+                                    schema: {
+                                      type: 'object',
+                                      properties: {
+                                        summary: {
+                                          type: 'string',
+                                        },
+                                      },
+                                      required: ['summary'],
+                                    },
+                                  },
+                                },
+                              }),
+                            }
+                          );
+
+                          if (!response.ok) {
+                            throw new Error(
+                              `Failed to fetch summary for ${channel.data?.name}`
+                            );
+                          }
+
+                          const data = await response.json();
+                          const content = JSON.parse(
+                            data.choices[0].message.content
+                          );
+                          console.log('content: ', content);
+                          return {
+                            channelName:
+                              channel.data?.name || 'Unnamed Channel',
+                            summary: content['summary'],
+                          };
+                        })
+                      );
+
+                      // Update state with new summaries
+                      setPlaceholderSummaries(summaries);
+                    } catch (error) {
+                      console.error('Error fetching channel summaries:', error);
+                    }
+                  };
+
+                  fetchChannelSummaries();
+                }}
+              >
+                Get summary of unread messages
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Unread Message Summaries</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Here are AI-generated summaries for channels with unread
+                  messages:
+                  {/* Placeholder for actual summaries */}
+                  <div className='mt-4 space-y-2 text-sm text-muted-foreground'>
+                    {placeholderSummaries.map((item, index) => (
+                      <div key={index}>
+                        <span className='font-medium text-foreground'>
+                          {item.channelName}:
+                        </span>{' '}
+                        {item.summary}
+                      </div>
+                    ))}
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <Button
+                  variant='default'
+                  onClick={() => {
+                    const summary = placeholderSummaries
+                      .map((item) => `${item.channelName}: ${item.summary}`)
+                      .join('\n');
+                    console.log('Summary: ', summary);
+
+                    playAudio(summary);
+                  }}
+                >
+                  Read out loud
+                </Button>
+                <AlertDialogCancel
+                  onClick={() => {
+                    if (audioElement) {
+                      audioElement.pause();
+                    }
+                  }}
+                >
+                  Close
+                </AlertDialogCancel>
+                {/* Optional: Add an action like "Mark as Read" or similar */}
+                {/* <AlertDialogAction>Mark All Read</AlertDialogAction> */}
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
+      <Button
+        variant='default'
+        onClick={() => {
+          playAudio('This is a test');
+        }}
+      >
+        Test speak
+      </Button>
       <ScrollArea className='block flex-1 h-full w-full'>{children}</ScrollArea>
     </section>
   );
+
+  function getUnreadMessages(channel: Channel): string[] {
+    const messages = channel.state.messages;
+    const numberOfUnreadMessages =
+      channel.state.read[user?.id as string].unread_messages;
+    return messages
+      .slice(-numberOfUnreadMessages)
+      .map((message) => `${message.user?.name}: ${message.text}`);
+  }
 };

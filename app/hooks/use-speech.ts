@@ -33,6 +33,7 @@ export function useSpeech(options: UseSpeechOptions = {}) {
         const result = await streamSpeech(voiceId, request);
 
         if (!result.ok) {
+          console.error('Error: ', result.error);
           throw new Error(result.error);
         }
 
