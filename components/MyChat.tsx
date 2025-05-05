@@ -4,11 +4,16 @@ import {
   Thread,
   Window,
   useCreateChatClient,
+  ChannelList,
 } from 'stream-chat-react';
 import { ChannelSort, User } from 'stream-chat';
 import 'stream-chat-react/dist/css/v2/index.layout.css';
 import { EmojiPicker } from 'stream-chat-react/emojis';
-import CustomChannelList from './CustomChannelList';
+import {
+  CustomChannelPreview,
+  CustomListContainer,
+  ListLoadingSkeleton,
+} from './CustomChannelList';
 import CustomChannelHeader from './CustomChannelHeader';
 import CustomMessageList from './CustomMessageList';
 import CustomMessageInput from './CustomMessageInput';
@@ -38,7 +43,15 @@ export default function MyChat({
 
   return (
     <Chat client={chatClient}>
-      <CustomChannelList filters={filters} sort={sort} options={options} />
+      <ChannelList
+        filters={filters}
+        sort={sort}
+        options={options}
+        List={CustomListContainer}
+        LoadingIndicator={ListLoadingSkeleton} // Use Shadcn Skeleton
+        Preview={CustomChannelPreview} // Use our custom preview component
+        sendChannelsToList={true}
+      />
       <Channel EmojiPicker={EmojiPicker}>
         <Window>
           <CustomChannelHeader />

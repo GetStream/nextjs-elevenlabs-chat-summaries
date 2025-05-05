@@ -1,8 +1,7 @@
 import React from 'react';
 import {
-  ChannelList,
-  ChannelListProps,
   ChannelPreviewUIComponentProps,
+  useChatContext,
 } from 'stream-chat-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,6 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { cva } from 'class-variance-authority'; // For styling variants (e.g., selected)
 import type { ChannelListMessengerProps } from 'stream-chat-react';
+import { DefaultGenerics } from 'stream-chat';
+import { useSpeech } from '@/app/hooks/use-speech';
+import { Button } from './ui/button';
 
 // We'll use the original ChannelList for its logic initially,
 // but provide custom UI components to it.
@@ -26,7 +28,7 @@ const getInitials = (name: string = '') =>
 
 // Define styles for the preview item, including a selected variant
 const channelPreviewVariants = cva(
-  'flex items-center min-w-80 bg-amber-50 space-x-3 p-2 rounded-md cursor-pointer transition-colors',
+  'flex w-full items-center bg-amber-50 space-x-3 p-2 rounded-md cursor-pointer transition-colors',
   {
     variants: {
       selected: {
@@ -41,18 +43,17 @@ const channelPreviewVariants = cva(
 );
 
 // Custom Component for rendering a single channel preview
-const CustomChannelPreview: React.FC<ChannelPreviewUIComponentProps> = (
-  props
-) => {
+export const CustomChannelPreview: React.ComponentType<
+  ChannelPreviewUIComponentProps<DefaultGenerics>
+> = (props: ChannelPreviewUIComponentProps<DefaultGenerics>) => {
   const { channel, setActiveChannel, latestMessage, unread, active } = props;
+
+  const { speak } = useSpeech();
 
   const channelName = channel.data?.name || 'Unnamed Channel';
   const lastMessageText = latestMessage ?? 'No messages yet';
 
-  console.log('I here');
-
   const handleSelectChannel = () => {
-    console.log('handleSelectChannel', channel);
     if (setActiveChannel) {
       setActiveChannel(channel);
     }
@@ -78,90 +79,106 @@ const CustomChannelPreview: React.FC<ChannelPreviewUIComponentProps> = (
             </span>
           )}
         </div>
-        <p className='text-xs text-muted-foreground truncate'>
+        <span className='text-xs text-muted-foreground truncate'>
           {lastMessageText}
-        </p>
+        </span>
       </div>
+      <button
+        onClick={() =>
+          speak('JBFqnCBsd6RMkjVDRZzb', {
+            text: lastMessageText.toString() ?? 'Test',
+          })
+        }
+      >
+        <svg
+          xmlns='http://www.w3.org/2000/svg'
+          fill='none'
+          viewBox='0 0 24 24'
+          strokeWidth={1.5}
+          stroke='currentColor'
+          className='size-6'
+        >
+          <path
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            d='M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z'
+          />
+        </svg>
+      </button>
     </button>
   );
 };
 
-// Main Custom Channel List component using the default logic
-const CustomChannelList: React.FC<ChannelListProps> = (props) => {
-  // Error state is typically handled by the ChannelList component internally
-  // or by providing an EmptyStateIndicator prop.
-  // We will rely on the LoadingIndicator for now.
-
-  // Custom Loading Skeleton using Shadcn Skeleton
-  const ListLoadingSkeleton = () => (
-    <div className='p-4 space-y-3'>
-      <div className='flex items-center space-x-3'>
-        <Skeleton className='h-9 w-9 rounded-full' />
-        <div className='space-y-1 flex-1'>
-          <Skeleton className='h-4 w-3/4' />
-          <Skeleton className='h-3 w-1/2' />
-        </div>
-      </div>
-      <div className='flex items-center space-x-3'>
-        <Skeleton className='h-9 w-9 rounded-full' />
-        <div className='space-y-1 flex-1'>
-          <Skeleton className='h-4 w-3/4' />
-          <Skeleton className='h-3 w-1/2' />
-        </div>
-      </div>
-      <div className='flex items-center space-x-3'>
-        <Skeleton className='h-9 w-9 rounded-full' />
-        <div className='space-y-1 flex-1'>
-          <Skeleton className='h-4 w-3/4' />
-          <Skeleton className='h-3 w-1/2' />
-        </div>
+export const ListLoadingSkeleton = () => (
+  <div className='p-4 space-y-3'>
+    <div className='flex items-center space-x-3'>
+      <Skeleton className='h-9 w-9 rounded-full' />
+      <div className='space-y-1 flex-1'>
+        <Skeleton className='h-4 w-3/4' />
+        <Skeleton className='h-3 w-1/2' />
       </div>
     </div>
-  );
+    <div className='flex items-center space-x-3'>
+      <Skeleton className='h-9 w-9 rounded-full' />
+      <div className='space-y-1 flex-1'>
+        <Skeleton className='h-4 w-3/4' />
+        <Skeleton className='h-3 w-1/2' />
+      </div>
+    </div>
+    <div className='flex items-center space-x-3'>
+      <Skeleton className='h-9 w-9 rounded-full' />
+      <div className='space-y-1 flex-1'>
+        <Skeleton className='h-4 w-3/4' />
+        <Skeleton className='h-3 w-1/2' />
+      </div>
+    </div>
+  </div>
+);
 
-  // Use ScrollArea for the list container, accepting the correct props type
-  // Explicitly add children to the props type
-  const CustomListContainer = ({
-    children,
-    loading,
-    loadedChannels,
-    error,
-  }: React.PropsWithChildren<ChannelListMessengerProps>) => {
-    console.log('I here: ', children, loading, loadedChannels);
+export const CustomListContainer = ({
+  children,
+  loading,
+  loadedChannels,
+  error,
+}: React.PropsWithChildren<ChannelListMessengerProps>) => {
+  const { client } = useChatContext();
+  const user = client?.user;
 
-    if (loading) {
-      return <div>Loading...</div>;
-    }
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
-    if (error) {
-      return <div>Error: {error.message}</div>;
-    }
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
 
-    if (loadedChannels?.length === 0) {
-      return <div>No channels found</div>;
-    }
+  if (loadedChannels?.length === 0) {
+    return <div>No channels found</div>;
+  }
 
-    console.dir('Loaded channels: ', loadedChannels?.[0].state.read);
+  console.log('loadedChannels: ', loadedChannels);
+  const unreadMessagesExist =
+    loadedChannels?.some(
+      (loadedChannel) =>
+        loadedChannel.state.read[user?.id as string]?.unread_messages > 0
+    ) ?? false;
+  console.log('unreadMessagesExist: ', unreadMessagesExist);
 
-    return <ScrollArea className='flex-1 h-full w-full'>{children}</ScrollArea>;
-  };
+  // TODO: use AlertDialog to show summary for channels and read the summaries out loud
 
   return (
-    <div className='w-64 border-r flex flex-col h-full'>
-      <div className='p-4 border-b'>
-        <h2 className='text-lg font-semibold'>Channels</h2>
+    <section className='w-full'>
+      <h2 className='px-4 py-2 text-lg font-semibold tracking-tight'>
+        Channels
+      </h2>
+      <div className='flex items-center justify-center py-4'>
+        {unreadMessagesExist && (
+          <Button variant='default' className='cursor-pointer'>
+            Get summary of unread messages
+          </Button>
+        )}
       </div>
-      <ChannelList
-        {...props} // Pass down all original props
-        List={CustomListContainer} // Use ScrollArea for the list itself
-        LoadingIndicator={ListLoadingSkeleton} // Use Shadcn Skeleton
-        Preview={CustomChannelPreview} // Use our custom preview component
-        // Hide default pagination, handle via props.options.limit or add custom pagination if needed
-        Paginator={() => null}
-        sendChannelsToList
-      />
-    </div>
+      <ScrollArea className='block flex-1 h-full w-full'>{children}</ScrollArea>
+    </section>
   );
 };
-
-export default CustomChannelList;
