@@ -24,6 +24,14 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { TextToSpeechRequest } from 'elevenlabs/api';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 // We'll use the original ChannelList for its logic initially,
 // but provide custom UI components to it.
@@ -338,16 +346,38 @@ export const CustomListContainer = ({
                 <AlertDialogDescription>
                   Here are AI-generated summaries for channels with unread
                   messages:
-                  {/* Placeholder for actual summaries */}
-                  <div className='mt-4 space-y-2 text-sm text-muted-foreground'>
-                    {placeholderSummaries.map((item, index) => (
-                      <div key={index}>
-                        <span className='font-medium text-foreground'>
-                          {item.channelName}:
-                        </span>{' '}
-                        {item.summary}
-                      </div>
-                    ))}
+                  <div className='mt-4'>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Channel</TableHead>
+                          <TableHead>Summary</TableHead>
+                          <TableHead>Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {placeholderSummaries.map((item, index) => (
+                          <TableRow key={index}>
+                            <TableCell className='font-medium text-foreground'>
+                              {item.channelName}
+                            </TableCell>
+                            <TableCell className='text-muted-foreground whitespace-pre-line break-words'>
+                              {item.summary}
+                            </TableCell>
+                            <TableCell>
+                              <button
+                                onClick={() => playAudio(item.summary)}
+                                aria-label={`Read summary for ${item.channelName}`}
+                                tabIndex={0}
+                                className='px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/80 transition focus:outline-none focus:ring-2 focus:ring-primary'
+                              >
+                                Read
+                              </button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 </AlertDialogDescription>
               </AlertDialogHeader>
@@ -363,7 +393,7 @@ export const CustomListContainer = ({
                     playAudio(summary);
                   }}
                 >
-                  Read out loud
+                  Read all
                 </Button>
                 <AlertDialogCancel
                   onClick={() => {
@@ -381,14 +411,6 @@ export const CustomListContainer = ({
           </AlertDialog>
         )}
       </div>
-      <Button
-        variant='default'
-        onClick={() => {
-          playAudio('This is a test');
-        }}
-      >
-        Test speak
-      </Button>
       <ScrollArea className='block flex-1 h-full w-full'>{children}</ScrollArea>
     </section>
   );
