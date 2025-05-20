@@ -118,7 +118,7 @@ const CustomMessageList: React.FC = () => {
   }
 
   return (
-    <ScrollArea className='flex-1' ref={scrollAreaRef}>
+    <ScrollArea className='my-message-list flex-1' ref={scrollAreaRef}>
       <div className='p-4 space-y-2'>
         {messages?.map((msg) => (
           <CustomMessage key={msg.id} message={msg} />

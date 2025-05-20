@@ -44,16 +44,23 @@
 }
 
 body {
-  display: flex;  
+  display: flex;
   height: 100dvh;
 }
 
 .str-chat__channel-list {
   width: 30%;
 }
+
 .str-chat__channel {
   width: 100%;
 }
+
+.my-message-list {
+  height: 100%;
+  overflow-y: scroll;
+}
+
 .str-chat__thread {
   width: 45%;
 }
@@ -131,6 +138,7 @@ body {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
