@@ -48,15 +48,15 @@ const getInitials = (name: string = '') =>
 
 // Define styles for the preview item, including a selected variant
 const channelPreviewVariants = cva(
-  'flex w-full max-w-full items-center bg-amber-50 space-x-3 p-2 rounded-md cursor-pointer transition-colors hover:bg-accent/50',
+  'flex w-full max-w-full items-center space-x-3 p-2 rounded-md cursor-pointer transition-colors',
   {
     variants: {
       selected: {
         true: 'bg-slate-300 text-accent-foreground',
-        false: 'bg-slate-50',
+        false: 'bg-slate-50 hover:bg-slate-100',
       },
       unread: {
-        true: 'bg-amber-50 ',
+        true: 'bg-amber-100 ',
         false: '',
       },
     },
@@ -228,6 +228,15 @@ export const CustomListContainer = ({
 
                       if (!channelsWithUnread?.length) return;
 
+                      const placeHolderSummaries = channelsWithUnread.map(
+                        (channel) => ({
+                          channelName: channel.data?.name || 'Unnamed Channel',
+                          summary: '',
+                        })
+                      );
+
+                      setPlaceholderSummaries(placeHolderSummaries);
+
                       // Fetch summaries for each channel
                       const summaries = await Promise.all(
                         channelsWithUnread.map(async (channel) => {
@@ -344,8 +353,15 @@ export const CustomListContainer = ({
                             <TableCell className='font-medium text-foreground'>
                               {item.channelName}
                             </TableCell>
-                            <TableCell className='text-muted-foreground whitespace-pre-line break-words'>
-                              {item.summary}
+                            <TableCell className='w-full text-muted-foreground whitespace-pre-line break-words space-y-2'>
+                              {item.summary === '' && (
+                                <>
+                                  <Skeleton className='w-full h-4' />
+                                  <Skeleton className='w-full h-4' />
+                                  <Skeleton className='w-full h-4' />
+                                </>
+                              )}
+                              {item.summary !== '' && <>{item.summary}</>}
                             </TableCell>
                             <TableCell>
                               <button
@@ -366,6 +382,7 @@ export const CustomListContainer = ({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <Button
+                  className='cursor-pointer'
                   variant='default'
                   onClick={() => {
                     const summary = placeholderSummaries
@@ -379,6 +396,7 @@ export const CustomListContainer = ({
                   Read all
                 </Button>
                 <AlertDialogCancel
+                  className='cursor-pointer'
                   onClick={() => {
                     if (audioElement) {
                       audioElement.pause();
