@@ -48,12 +48,16 @@ const getInitials = (name: string = '') =>
 
 // Define styles for the preview item, including a selected variant
 const channelPreviewVariants = cva(
-  'flex w-full max-w-full items-center bg-amber-50 space-x-3 p-2 rounded-md cursor-pointer transition-colors',
+  'flex w-full max-w-full items-center bg-amber-50 space-x-3 p-2 rounded-md cursor-pointer transition-colors hover:bg-accent/50',
   {
     variants: {
       selected: {
-        true: 'bg-accent text-accent-foreground',
-        false: 'hover:bg-accent/50',
+        true: 'bg-slate-300 text-accent-foreground',
+        false: 'bg-slate-50',
+      },
+      unread: {
+        true: 'bg-amber-50 ',
+        false: '',
       },
     },
     defaultVariants: {
@@ -79,7 +83,12 @@ export const CustomChannelPreview: React.ComponentType<
 
   return (
     <button
-      className={cn(channelPreviewVariants({ selected: active }))}
+      className={cn(
+        channelPreviewVariants({
+          selected: active,
+          unread: unread ? unread > 0 : false,
+        })
+      )}
       onClick={handleSelectChannel}
       tabIndex={0}
       aria-label={`Select channel ${channelName}`}
