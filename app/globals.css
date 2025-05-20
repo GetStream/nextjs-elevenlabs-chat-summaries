@@ -137,5 +137,9 @@ body {
 }
 
 .str-chat__channel-list {
-  width: 40rem;
+  @apply w-[30vw] min-w-[30vw] max-w-[30vw] flex flex-col items-center justify-center;
+}
+
+.latestMessageText > p {
+  @apply w-full max-w-[24vw] text-left text-xs text-muted-foreground truncate overflow-hidden;
 }

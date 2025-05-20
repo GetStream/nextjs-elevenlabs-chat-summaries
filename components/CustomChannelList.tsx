@@ -48,7 +48,7 @@ const getInitials = (name: string = '') =>
 
 // Define styles for the preview item, including a selected variant
 const channelPreviewVariants = cva(
-  'flex w-full items-center bg-amber-50 space-x-3 p-2 rounded-md cursor-pointer transition-colors',
+  'flex w-full max-w-full items-center bg-amber-50 space-x-3 p-2 rounded-md cursor-pointer transition-colors',
   {
     variants: {
       selected: {
@@ -67,8 +67,6 @@ export const CustomChannelPreview: React.ComponentType<
   ChannelPreviewUIComponentProps<DefaultGenerics>
 > = (props: ChannelPreviewUIComponentProps<DefaultGenerics>) => {
   const { channel, setActiveChannel, latestMessage, unread, active } = props;
-
-  const { speak } = useSpeech();
 
   const channelName = channel.data?.name || 'Unnamed Channel';
   const lastMessageText = latestMessage ?? 'No messages yet';
@@ -90,7 +88,7 @@ export const CustomChannelPreview: React.ComponentType<
         <AvatarImage src={channel.data?.image as string} alt={channelName} />
         <AvatarFallback>{getInitials(channelName)}</AvatarFallback>
       </Avatar>
-      <div className='flex-1 min-w-0'>
+      <div className='flex-1'>
         <div className='flex justify-between items-center'>
           <p className='text-sm font-medium truncate'>{channelName}</p>
           {unread !== undefined && unread > 0 && (
@@ -99,32 +97,8 @@ export const CustomChannelPreview: React.ComponentType<
             </span>
           )}
         </div>
-        <span className='text-xs text-muted-foreground truncate'>
-          {lastMessageText}
-        </span>
+        <span className='latestMessageText'>{lastMessageText}</span>
       </div>
-      <button
-        onClick={() =>
-          speak('JBFqnCBsd6RMkjVDRZzb', {
-            text: lastMessageText.toString() ?? 'Test',
-          })
-        }
-      >
-        <svg
-          xmlns='http://www.w3.org/2000/svg'
-          fill='none'
-          viewBox='0 0 24 24'
-          strokeWidth={1.5}
-          stroke='currentColor'
-          className='size-6'
-        >
-          <path
-            strokeLinecap='round'
-            strokeLinejoin='round'
-            d='M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z'
-          />
-        </svg>
-      </button>
     </button>
   );
 };
@@ -222,11 +196,11 @@ export const CustomListContainer = ({
   // TODO: use AlertDialog to show summary for channels and read the summaries out loud
 
   return (
-    <section className='w-full'>
-      <h2 className='px-4 py-2 text-lg font-semibold tracking-tight'>
+    <>
+      <h2 className='px-4 py-2 text-lg font-semibold tracking-tight w-full'>
         Channels
       </h2>
-      <div className='flex items-center justify-center py-4'>
+      <div className='flex items-center justify-center px-4 py-4 w-full'>
         {unreadMessagesExist && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -340,14 +314,14 @@ export const CustomListContainer = ({
                 Get summary of unread messages
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent className='min-w-[70%] max-w-3xl w-full'>
               <AlertDialogHeader>
                 <AlertDialogTitle>Unread Message Summaries</AlertDialogTitle>
                 <AlertDialogDescription>
                   Here are AI-generated summaries for channels with unread
                   messages:
                   <div className='mt-4'>
-                    <Table>
+                    <Table className='w-full'>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Channel</TableHead>
@@ -411,8 +385,8 @@ export const CustomListContainer = ({
           </AlertDialog>
         )}
       </div>
-      <ScrollArea className='block flex-1 h-full w-full'>{children}</ScrollArea>
-    </section>
+      <ScrollArea className='h-full w-full'>{children}</ScrollArea>
+    </>
   );
 
   function getUnreadMessages(channel: Channel): string[] {
