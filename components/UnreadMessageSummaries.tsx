@@ -36,7 +36,7 @@ export default function UnreadMessageSummaries({
   loadedChannels,
   user,
 }: UnreadMessageSummariesProps) {
-  const [placeholderSummaries, setPlaceholderSummaries] = useState<
+  const [channelSummaries, setChannelSummaries] = useState<
     { channelName: string; summary: string }[]
   >([]);
 
@@ -75,7 +75,7 @@ export default function UnreadMessageSummaries({
   };
 
   return (
-    <div className='flex items-center justify-center px-4 py-4 w-full'>
+    <section className='flex items-center justify-center px-4 py-4 w-full'>
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button
@@ -100,91 +100,17 @@ export default function UnreadMessageSummaries({
                     })
                   );
 
-                  setPlaceholderSummaries(placeHolderSummaries);
+                  setChannelSummaries(placeHolderSummaries);
 
                   // Fetch summaries for each channel
                   const summaries = await Promise.all(
                     channelsWithUnread.map(async (channel) => {
-                      console.log(
-                        `Getting summary for ${
-                          channel.data?.name
-                        } with body: ${JSON.stringify({
-                          messages: [
-                            {
-                              role: 'system',
-                              content:
-                                'You are handed messages from a chat channel. Please summarize them and ensure no context misses. If important also name the people involved and what their intentions and/or questions have been.',
-                            },
-                            {
-                              role: 'user',
-                              content: `Unread messages: ${getUnreadMessages(
-                                channel
-                              )}`,
-                            },
-                          ],
-                        })}`
-                      );
-                      const response = await fetch(
-                        'http://127.0.0.1:1234/v1/chat/completions',
-                        {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({
-                            messages: [
-                              {
-                                role: 'system',
-                                content:
-                                  'You are handed messages from a chat channel. Please summarize them in 2 sentences and ensure there is no missing information. Respond only with the summary that is relevant to the user and no boilerplate.',
-                              },
-                              {
-                                role: 'user',
-                                content: `Unread messages: ${getUnreadMessages(
-                                  channel
-                                )}`,
-                              },
-                            ],
-                            response_format: {
-                              type: 'json_schema',
-                              json_schema: {
-                                name: 'summary_response',
-                                strict: 'true',
-                                schema: {
-                                  type: 'object',
-                                  properties: {
-                                    summary: {
-                                      type: 'string',
-                                    },
-                                  },
-                                  required: ['summary'],
-                                },
-                              },
-                            },
-                          }),
-                        }
-                      );
-
-                      if (!response.ok) {
-                        throw new Error(
-                          `Failed to fetch summary for ${channel.data?.name}`
-                        );
-                      }
-
-                      const data = await response.json();
-                      const content = JSON.parse(
-                        data.choices[0].message.content
-                      );
-                      console.log('content: ', content);
-                      return {
-                        channelName: channel.data?.name || 'Unnamed Channel',
-                        summary: content['summary'],
-                      };
+                      return getSummaryForChannel(channel);
                     })
                   );
 
                   // Update state with new summaries
-                  setPlaceholderSummaries(summaries);
+                  setChannelSummaries(summaries);
                 } catch (error) {
                   console.error('Error fetching channel summaries:', error);
                 }
@@ -201,46 +127,44 @@ export default function UnreadMessageSummaries({
             <AlertDialogTitle>Unread Message Summaries</AlertDialogTitle>
             <AlertDialogDescription>
               Here are AI-generated summaries for channels with unread messages:
-              <div className='mt-4'>
-                <Table className='w-full'>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Channel</TableHead>
-                      <TableHead>Summary</TableHead>
-                      <TableHead>Action</TableHead>
+              <Table className='w-full mt-4'>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Channel</TableHead>
+                    <TableHead>Summary</TableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {channelSummaries.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell className='font-medium text-foreground'>
+                        {item.channelName}
+                      </TableCell>
+                      <TableCell className='w-full text-muted-foreground whitespace-pre-line break-words space-y-2'>
+                        {item.summary === '' && (
+                          <>
+                            <Skeleton className='w-full h-4' />
+                            <Skeleton className='w-full h-4' />
+                            <Skeleton className='w-full h-4' />
+                          </>
+                        )}
+                        {item.summary !== '' && <>{item.summary}</>}
+                      </TableCell>
+                      <TableCell>
+                        <button
+                          onClick={() => playAudio(item.summary)}
+                          aria-label={`Read summary for ${item.channelName}`}
+                          tabIndex={0}
+                          className='px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/80 transition focus:outline-none focus:ring-2 focus:ring-primary'
+                        >
+                          Read
+                        </button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {placeholderSummaries.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className='font-medium text-foreground'>
-                          {item.channelName}
-                        </TableCell>
-                        <TableCell className='w-full text-muted-foreground whitespace-pre-line break-words space-y-2'>
-                          {item.summary === '' && (
-                            <>
-                              <Skeleton className='w-full h-4' />
-                              <Skeleton className='w-full h-4' />
-                              <Skeleton className='w-full h-4' />
-                            </>
-                          )}
-                          {item.summary !== '' && <>{item.summary}</>}
-                        </TableCell>
-                        <TableCell>
-                          <button
-                            onClick={() => playAudio(item.summary)}
-                            aria-label={`Read summary for ${item.channelName}`}
-                            tabIndex={0}
-                            className='px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/80 transition focus:outline-none focus:ring-2 focus:ring-primary'
-                          >
-                            Read
-                          </button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  ))}
+                </TableBody>
+              </Table>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -248,7 +172,7 @@ export default function UnreadMessageSummaries({
               className='cursor-pointer'
               variant='default'
               onClick={() => {
-                const summary = placeholderSummaries
+                const summary = channelSummaries
                   .map((item) => `${item.channelName}: ${item.summary}`)
                   .join('\n');
                 console.log('Summary: ', summary);
@@ -273,8 +197,76 @@ export default function UnreadMessageSummaries({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </section>
   );
+
+  async function getSummaryForChannel(channel: Channel): Promise<{
+    channelName: string;
+    summary: string;
+  }> {
+    console.log(
+      `Getting summary for ${channel.data?.name} with body: ${JSON.stringify({
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are handed messages from a chat channel. Please summarize them and ensure no context misses. If important also name the people involved and what their intentions and/or questions have been.',
+          },
+          {
+            role: 'user',
+            content: `Unread messages: ${getUnreadMessages(channel)}`,
+          },
+        ],
+      })}`
+    );
+    const response = await fetch('http://127.0.0.1:1234/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are handed messages from a chat channel. Please summarize them in 2 sentences and ensure there is no missing information. Respond only with the summary that is relevant to the user and no boilerplate.',
+          },
+          {
+            role: 'user',
+            content: `Unread messages: ${getUnreadMessages(channel)}`,
+          },
+        ],
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'summary_response',
+            strict: 'true',
+            schema: {
+              type: 'object',
+              properties: {
+                summary: {
+                  type: 'string',
+                },
+              },
+              required: ['summary'],
+            },
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch summary for ${channel.data?.name}`);
+    }
+
+    const data = await response.json();
+    const content = JSON.parse(data.choices[0].message.content);
+    console.log('content: ', content);
+    return {
+      channelName: channel.data?.name || 'Unnamed Channel',
+      summary: content['summary'],
+    };
+  }
 
   function getUnreadMessages(channel: Channel): string[] {
     const messages = channel.state.messages;
