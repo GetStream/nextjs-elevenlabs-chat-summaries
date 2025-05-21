@@ -15,7 +15,6 @@ export default function Home() {
   const [homeState, setHomeState] = useState<HomeState | undefined>();
   const [error, setError] = useState<string | undefined>();
 
-  // TODO: The userId and userName must be set for the code to run. Either dynamically after log-in or hardcoded
   const userId =
     'uypg6c2hmxu93shhbdnk8ezy2d343qp4zc5jzmcu9eajmgazdcb7m7a2e4tgprns';
   const userName = 'Test User';
