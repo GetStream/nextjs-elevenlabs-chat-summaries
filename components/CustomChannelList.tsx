@@ -11,8 +11,6 @@ import { cva } from 'class-variance-authority'; // For styling variants (e.g., s
 import type { ChannelListMessengerProps } from 'stream-chat-react';
 import { DefaultGenerics } from 'stream-chat';
 
-import UnreadMessageSummaries from './UnreadMessageSummaries';
-
 // We'll use the original ChannelList for its logic initially,
 // but provide custom UI components to it.
 // Or completely replace it depending on complexity needed.
@@ -152,9 +150,6 @@ export const CustomListContainer = ({
       <h2 className='px-4 py-2 text-lg font-semibold tracking-tight w-full'>
         Channels
       </h2>
-      {unreadMessagesExist && loadedChannels && (
-        <UnreadMessageSummaries loadedChannels={loadedChannels} user={user} />
-      )}
       <ScrollArea className='h-full w-full'>{children}</ScrollArea>
     </>
   );
