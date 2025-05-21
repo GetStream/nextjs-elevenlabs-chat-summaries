@@ -19,8 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { TextToSpeechRequest } from 'elevenlabs/api';
-import { useSpeech } from '@/app/hooks/use-speech';
 import { Channel, OwnUserResponse, UserResponse } from 'stream-chat';
 import { DefaultStreamChatGenerics } from 'stream-chat-react';
 
@@ -39,40 +37,6 @@ export default function UnreadMessageSummaries({
   const [channelSummaries, setChannelSummaries] = useState<
     { channelName: string; summary: string }[]
   >([]);
-
-  const { speak } = useSpeech();
-
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
-    null
-  );
-
-  const playAudio = async (text: string) => {
-    const requestData: TextToSpeechRequest = {
-      text: text,
-      model_id: 'eleven_multilingual_v2', // Add model ID as recommended in docs
-    };
-
-    try {
-      // Use voice ID from Eleven Labs docs
-      const audioUrl = await speak('JBFqnCBsd6RMkjVDRZzb', requestData);
-      console.log('Audio URL:', audioUrl);
-
-      if (audioUrl) {
-        // Create and play the audio
-        if (audioElement) {
-          audioElement.pause();
-          audioElement.src = audioUrl;
-          audioElement.play();
-        } else {
-          const newAudio = new Audio(audioUrl);
-          setAudioElement(newAudio);
-          newAudio.play();
-        }
-      }
-    } catch (err) {
-      console.error('Failed to play audio:', err);
-    }
-  };
 
   return (
     <section className='flex items-center justify-center px-4 py-4 w-full'>
@@ -132,7 +96,6 @@ export default function UnreadMessageSummaries({
                   <TableRow>
                     <TableHead>Channel</TableHead>
                     <TableHead>Summary</TableHead>
-                    <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -151,16 +114,6 @@ export default function UnreadMessageSummaries({
                         )}
                         {item.summary !== '' && <>{item.summary}</>}
                       </TableCell>
-                      <TableCell>
-                        <button
-                          onClick={() => playAudio(item.summary)}
-                          aria-label={`Read summary for ${item.channelName}`}
-                          tabIndex={0}
-                          className='px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/80 transition focus:outline-none focus:ring-2 focus:ring-primary'
-                        >
-                          Read
-                        </button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -168,32 +121,9 @@ export default function UnreadMessageSummaries({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button
-              className='cursor-pointer'
-              variant='default'
-              onClick={() => {
-                const summary = channelSummaries
-                  .map((item) => `${item.channelName}: ${item.summary}`)
-                  .join('\n');
-                console.log('Summary: ', summary);
-
-                playAudio(summary);
-              }}
-            >
-              Read all
-            </Button>
-            <AlertDialogCancel
-              className='cursor-pointer'
-              onClick={() => {
-                if (audioElement) {
-                  audioElement.pause();
-                }
-              }}
-            >
+            <AlertDialogCancel className='cursor-pointer'>
               Close
             </AlertDialogCancel>
-            {/* Optional: Add an action like "Mark as Read" or similar */}
-            {/* <AlertDialogAction>Mark All Read</AlertDialogAction> */}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
