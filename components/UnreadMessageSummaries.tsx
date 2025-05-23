@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from './ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -12,13 +12,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Table,
   TableBody,
   TableCell,
@@ -26,8 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { TextToSpeechRequest, Voice } from 'elevenlabs/api';
-import { useSpeech } from '@/app/hooks/use-speech';
 import { Channel, OwnUserResponse, UserResponse } from 'stream-chat';
 import { DefaultStreamChatGenerics } from 'stream-chat-react';
 
@@ -46,53 +37,6 @@ export default function UnreadMessageSummaries({
   const [channelSummaries, setChannelSummaries] = useState<
     { channelName: string; summary: string }[]
   >([]);
-  const [voiceId, setVoiceId] = useState<string>('JBFqnCBsd6RMkjVDRZzb');
-  const [voices, setVoices] = useState<Voice[]>([]);
-
-  const { speak, getVoices } = useSpeech();
-
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
-    null
-  );
-
-  useEffect(() => {
-    const fetchVoices = async () => {
-      console.log('Fetching voices');
-      const voices = await getVoices();
-      setVoices(voices);
-    };
-    fetchVoices();
-  }, [getVoices]);
-
-  const playAudio = async (text: string) => {
-    console.log('Playing with voice: ', voiceId);
-
-    const requestData: TextToSpeechRequest = {
-      text: text,
-      model_id: 'eleven_flash_v2_5', // Options: eleven_flash_v2_5, eleven_multilingual_v2, eleven_turbo_v2_5
-    };
-
-    try {
-      // Use voice ID from Eleven Labs docs
-      const audioUrl = await speak(voiceId, requestData);
-      console.log('Audio URL:', audioUrl);
-
-      if (audioUrl) {
-        // Create and play the audio
-        if (audioElement) {
-          audioElement.pause();
-          audioElement.src = audioUrl;
-          audioElement.play();
-        } else {
-          const newAudio = new Audio(audioUrl);
-          setAudioElement(newAudio);
-          newAudio.play();
-        }
-      }
-    } catch (err) {
-      console.error('Failed to play audio:', err);
-    }
-  };
 
   return (
     <section className='flex items-center justify-center px-4 py-4 w-full'>
@@ -144,24 +88,7 @@ export default function UnreadMessageSummaries({
         </AlertDialogTrigger>
         <AlertDialogContent className='min-w-[70%] max-w-3xl w-full'>
           <AlertDialogHeader>
-            <div className='flex items-center justify-between gap-2'>
-              <AlertDialogTitle>Unread Message Summaries</AlertDialogTitle>
-              <Select
-                value={voiceId}
-                onValueChange={(value) => setVoiceId(value)}
-              >
-                <SelectTrigger className='w-[180px]'>
-                  <SelectValue placeholder='Select Voice' />
-                </SelectTrigger>
-                <SelectContent>
-                  {voices.map((voice) => (
-                    <SelectItem key={voice.voice_id} value={voice.voice_id}>
-                      {voice.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <AlertDialogTitle>Unread Message Summaries</AlertDialogTitle>
             <AlertDialogDescription>
               Here are AI-generated summaries for channels with unread messages:
               <Table className='w-full mt-4'>
@@ -169,7 +96,6 @@ export default function UnreadMessageSummaries({
                   <TableRow>
                     <TableHead>Channel</TableHead>
                     <TableHead>Summary</TableHead>
-                    <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -188,16 +114,6 @@ export default function UnreadMessageSummaries({
                         )}
                         {item.summary !== '' && <>{item.summary}</>}
                       </TableCell>
-                      <TableCell>
-                        <button
-                          onClick={() => playAudio(item.summary)}
-                          aria-label={`Read summary for ${item.channelName}`}
-                          tabIndex={0}
-                          className='px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/80 transition focus:outline-none focus:ring-2 focus:ring-primary'
-                        >
-                          Read
-                        </button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -205,28 +121,7 @@ export default function UnreadMessageSummaries({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button
-              className='cursor-pointer'
-              variant='default'
-              onClick={() => {
-                const summary = channelSummaries
-                  .map((item) => `${item.channelName}: ${item.summary}`)
-                  .join('\n');
-                console.log('Summary: ', summary);
-
-                playAudio(summary);
-              }}
-            >
-              Read all
-            </Button>
-            <AlertDialogCancel
-              className='cursor-pointer'
-              onClick={() => {
-                if (audioElement) {
-                  audioElement.pause();
-                }
-              }}
-            >
+            <AlertDialogCancel className='cursor-pointer'>
               Close
             </AlertDialogCancel>
             {/* Optional: Add an action like "Mark as Read" or similar */}
