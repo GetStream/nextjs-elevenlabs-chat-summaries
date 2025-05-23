@@ -1,9 +1,10 @@
 'use client';
 
-import type { TextToSpeechRequest } from 'elevenlabs/api';
+import type { TextToSpeechRequest, Voice } from 'elevenlabs/api';
 import { useState, useCallback } from 'react';
 
 import { streamSpeech } from '@/app/actions/stream-speech';
+import { getVoices as getVoicesAction } from '@/app/actions/get-voices';
 
 type UseSpeechOptions = {
   onError?: (error: string) => void;
@@ -55,8 +56,14 @@ export function useSpeech(options: UseSpeechOptions = {}) {
     [isLoading, options]
   );
 
+  const getVoices = useCallback(async (): Promise<Voice[]> => {
+    const voices = await getVoicesAction();
+    return voices;
+  }, []);
+
   return {
     speak,
+    getVoices,
     isLoading,
     error,
   };

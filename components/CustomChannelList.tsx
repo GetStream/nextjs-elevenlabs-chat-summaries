@@ -139,13 +139,11 @@ export const CustomListContainer = ({
     return <div>No channels found</div>;
   }
 
-  console.log('loadedChannels: ', loadedChannels);
   const unreadMessagesExist =
     loadedChannels?.some(
       (loadedChannel) =>
         loadedChannel.state.read[user?.id as string]?.unread_messages > 0
     ) ?? false;
-  console.log('unreadMessagesExist: ', unreadMessagesExist);
 
   return (
     <>
