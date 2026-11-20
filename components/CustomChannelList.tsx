@@ -1,21 +1,20 @@
-import React from 'react';
+import React, { useEffect, useReducer } from 'react';
+import type { Channel, ChannelPaginator } from 'stream-chat';
 import {
-  ChannelPreviewUIComponentProps,
+  useChannelPaginatorState,
   useChatContext,
+  useWorkspaceNavigation,
+  type ChannelListItemUIProps,
 } from 'stream-chat-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { cva } from 'class-variance-authority'; // For styling variants (e.g., selected)
-import type { ChannelListMessengerProps } from 'stream-chat-react';
-import { DefaultGenerics } from 'stream-chat';
 
 import UnreadMessageSummaries from './UnreadMessageSummaries';
 
-// We'll use the original ChannelList for its logic initially,
-// but provide custom UI components to it.
-// Or completely replace it depending on complexity needed.
+// We use the SDK's ChannelList for its logic (pagination, live updates)
+// and provide custom UI components to it.
 
 // Function to get initials (move to utils)
 const getInitials = (name: string = '') =>
@@ -47,18 +46,15 @@ const channelPreviewVariants = cva(
 );
 
 // Custom Component for rendering a single channel preview
-export const CustomChannelPreview: React.ComponentType<
-  ChannelPreviewUIComponentProps<DefaultGenerics>
-> = (props: ChannelPreviewUIComponentProps<DefaultGenerics>) => {
-  const { channel, setActiveChannel, latestMessage, unread, active } = props;
+export const CustomChannelPreview = (props: ChannelListItemUIProps) => {
+  const { channel, previewedMessage, unread, active } = props;
+  const { openChannel } = useWorkspaceNavigation();
 
-  const channelName = channel.data?.name || 'Unnamed Channel';
-  const lastMessageText = latestMessage ?? 'No messages yet';
+  const channelName = channel.data?.custom?.name || 'Unnamed Channel';
+  const lastMessageText = previewedMessage?.text || 'No messages yet';
 
-  const handleSelectChannel = () => {
-    if (setActiveChannel) {
-      setActiveChannel(channel);
-    }
+  const handleSelectChannel = (event: React.MouseEvent) => {
+    openChannel(channel, { event });
   };
 
   return (
@@ -70,11 +66,12 @@ export const CustomChannelPreview: React.ComponentType<
         })
       )}
       onClick={handleSelectChannel}
-      tabIndex={0}
+      role='option'
+      aria-selected={active || undefined}
       aria-label={`Select channel ${channelName}`}
     >
       <Avatar className='w-9 h-9 flex-shrink-0'>
-        <AvatarImage src={channel.data?.image as string} alt={channelName} />
+        <AvatarImage src={channel.data?.custom?.image} alt={channelName} />
         <AvatarFallback>{getInitials(channelName)}</AvatarFallback>
       </Avatar>
       <div className='flex-1'>
@@ -86,7 +83,9 @@ export const CustomChannelPreview: React.ComponentType<
             </span>
           )}
         </div>
-        <span className='latestMessageText'>{lastMessageText}</span>
+        <span className='latestMessageText'>
+          <p>{lastMessageText}</p>
+        </span>
       </div>
     </button>
   );
@@ -118,34 +117,42 @@ export const ListLoadingSkeleton = () => (
   </div>
 );
 
+// Re-renders the caller when the current user's unread count changes in one of
+// the channels. The paginator's items only change when the list itself does.
+const useUnreadCountUpdates = (
+  channels: Channel[] | undefined,
+  userId: string | undefined
+) => {
+  const [, forceUpdate] = useReducer((count: number) => count + 1, 0);
+
+  useEffect(() => {
+    if (!channels || !userId) return;
+    const unsubscribes = channels.map((channel) =>
+      channel.state.subscribeWithSelector(
+        ({ read }) => ({ unread: read[userId]?.unread_messages ?? 0 }),
+        forceUpdate
+      )
+    );
+    return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
+  }, [channels, userId]);
+};
+
 export const CustomListContainer = ({
   children,
-  loading,
-  loadedChannels,
-  error,
-}: React.PropsWithChildren<ChannelListMessengerProps>) => {
+  paginator,
+}: React.PropsWithChildren<{ paginator: ChannelPaginator }>) => {
   const { client } = useChatContext();
   const user = client?.user;
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  // The channels loaded by the channel list so far.
+  const { channels: loadedChannels } = useChannelPaginatorState(paginator);
+  useUnreadCountUpdates(loadedChannels, user?.id);
 
-  if (error) {
-    return <div>Error: {error.message}</div>;
-  }
-
-  if (loadedChannels?.length === 0) {
-    return <div>No channels found</div>;
-  }
-
-  console.log('loadedChannels: ', loadedChannels);
   const unreadMessagesExist =
     loadedChannels?.some(
       (loadedChannel) =>
         loadedChannel.state.read[user?.id as string]?.unread_messages > 0
     ) ?? false;
-  console.log('unreadMessagesExist: ', unreadMessagesExist);
 
   return (
     <>
@@ -155,7 +162,7 @@ export const CustomListContainer = ({
       {unreadMessagesExist && loadedChannels && (
         <UnreadMessageSummaries loadedChannels={loadedChannels} user={user} />
       )}
-      <ScrollArea className='h-full w-full'>{children}</ScrollArea>
+      <div className='flex min-h-0 w-full flex-1 flex-col'>{children}</div>
     </>
   );
 };
