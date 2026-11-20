@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useChannelStateContext } from 'stream-chat-react';
+import { useChannel } from 'stream-chat-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Info } from 'lucide-react'; // Example icon
 
 const CustomChannelHeader: React.FC = () => {
-  const { channel } = useChannelStateContext();
+  const channel = useChannel();
   // const { client } = useChatContext(); // Keep client if needed for other actions
 
   // Placeholder: log the client to satisfy linter for now
@@ -32,14 +32,14 @@ const CustomChannelHeader: React.FC = () => {
     );
   }
 
-  const channelName = channel.data?.name || 'Unnamed Channel';
+  const channelName = channel.data?.custom?.name || 'Unnamed Channel';
   const memberCount = channel.data?.member_count;
 
   return (
     <div className='flex items-center justify-between p-3 border-b'>
       <div className='flex items-center space-x-3'>
         <Avatar className='w-9 h-9'>
-          <AvatarImage src={channel.data?.image as string} alt={channelName} />
+          <AvatarImage src={channel.data?.custom?.image} alt={channelName} />
           <AvatarFallback>{getInitials(channelName)}</AvatarFallback>
         </Avatar>
         <div className='flex flex-col'>
