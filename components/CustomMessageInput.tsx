@@ -1,22 +1,26 @@
 import React, { useState } from 'react';
-import { useChannelActionContext } from 'stream-chat-react';
+import { useMessageComposerController } from 'stream-chat-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
 
 const CustomMessageInput: React.FC = () => {
-  const { sendMessage } = useChannelActionContext();
+  // The channel's MessageComposer (stream-chat) composes and sends the message.
+  const messageComposer = useMessageComposerController();
   const [text, setText] = useState('');
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
 
-    sendMessage({
-      text: text,
-      // Add other potential fields like attachments, mentioned_users etc. if needed
-    })
-      .then(() => setText('')) // Clear input on success
+    messageComposer.textComposer.setText(text);
+    // send() shows the message optimistically and never rejects; a failed
+    // message stays in the list marked as failed.
+    messageComposer
+      .send()
+      .then((result) => {
+        if (result !== 'nothing-to-send') setText(''); // Clear input once sent
+      })
       .catch((err) => console.error('Error sending message:', err));
   };
 
