@@ -98,13 +98,19 @@ const CustomMessageList: React.FC = () => {
 
   // Mark the channel read while it is open and the tab is visible: when it is
   // opened, when a new message arrives and when the tab becomes visible again.
+  // While the tab is visible the channel counts as "viewing live", so the LLC
+  // does not bump the own unread count on message.new (no badge/button flash).
   useEffect(() => {
+    const client = channel.getClient();
     const markReadIfVisible = () => {
-      if (document.visibilityState !== 'visible') return;
-      if (channel.countUnread() === 0) return;
-      channel
-        .markReadViaReporter()
-        .catch((err) => console.error('Error marking channel read:', err));
+      const visible = document.visibilityState === 'visible';
+      channel.messagePaginator.setViewingLive(visible);
+      if (!visible) return;
+      const userId = client.userId;
+      const latest = channel.messagePaginator.latestMessage;
+      if (!userId || !latest || latest.user?.id === userId) return;
+      if (channel.state.read[userId]?.last_read_message_id === latest.id) return;
+      client.messageDeliveryReporter.throttledMarkRead(channel);
     };
 
     markReadIfVisible();
@@ -113,6 +119,7 @@ const CustomMessageList: React.FC = () => {
     return () => {
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', markReadIfVisible);
+      channel.messagePaginator.setViewingLive(false);
     };
   }, [channel]);
 
