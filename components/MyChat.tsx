@@ -1,14 +1,22 @@
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Chat,
+  ChannelPaginator,
+  type Channel as StreamChannel,
+  type ClientUser,
+  type SortParamRequest,
+} from 'stream-chat';
+import {
   Channel,
-  Thread,
-  Window,
-  useCreateChatClient,
   ChannelList,
+  ChannelPlaceholder,
+  Chat,
+  defaultWorkspaceNavigation,
+  useCreateChatClient,
+  WithComponents,
+  WorkspaceNavigationProvider,
+  type WorkspaceNavigation,
 } from 'stream-chat-react';
-import { ChannelSort, User } from 'stream-chat';
-import 'stream-chat-react/dist/css/v2/index.layout.css';
-import { EmojiPicker } from 'stream-chat-react/emojis';
+import 'stream-chat-react/dist/css/index.css';
 import {
   CustomChannelPreview,
   CustomListContainer,
@@ -18,13 +26,15 @@ import CustomChannelHeader from './CustomChannelHeader';
 import CustomMessageList from './CustomMessageList';
 import CustomMessageInput from './CustomMessageInput';
 
+const sort: SortParamRequest[] = [{ field: 'last_message_at', direction: -1 }];
+
 export default function MyChat({
   apiKey,
   user,
   token,
 }: {
   apiKey: string;
-  user: User;
+  user: ClientUser;
   token: string;
 }) {
   const chatClient = useCreateChatClient({
@@ -33,33 +43,75 @@ export default function MyChat({
     userData: user,
   });
 
-  if (!chatClient) {
+  // The channel list is driven by a ChannelPaginator. Registering it with the
+  // channel manager keeps it up to date with WebSocket events.
+  const paginator = useMemo(() => {
+    if (!chatClient) return undefined;
+    return new ChannelPaginator({
+      client: chatClient,
+      filters: { members: { $in: [user.id] } },
+      sort,
+      id: 'channels:default',
+      paginatorOptions: { pageSize: 10 },
+    });
+  }, [chatClient, user.id]);
+
+  useEffect(() => {
+    if (!chatClient || !paginator) return;
+    chatClient.channelManager.insertPaginator({ paginator });
+    return () => {
+      chatClient.channelManager.removePaginator(paginator);
+    };
+  }, [chatClient, paginator]);
+
+  // No channel is open until the user selects one in the list.
+  const [activeChannel, setActiveChannel] = useState<StreamChannel>();
+  const navigation = useMemo<WorkspaceNavigation>(
+    () => ({
+      ...defaultWorkspaceNavigation,
+      isChannelActive: (cid) => !!cid && cid === activeChannel?.cid,
+      openChannel: (channel) => setActiveChannel(channel),
+      openChannels: activeChannel ? [activeChannel] : [],
+    }),
+    [activeChannel]
+  );
+
+  if (!chatClient || !paginator) {
     return <div>Loading Chat...</div>;
   }
 
-  const filters = { members: { $in: [user.id] } };
-  const sort: ChannelSort = { last_message_at: -1 };
-  const options = { limit: 10 };
-
   return (
     <Chat client={chatClient}>
-      <ChannelList
-        filters={filters}
-        sort={sort}
-        options={options}
-        List={CustomListContainer}
-        LoadingIndicator={ListLoadingSkeleton} // Use Shadcn Skeleton
-        Preview={CustomChannelPreview} // Use our custom preview component
-        sendChannelsToList={true}
-      />
-      <Channel EmojiPicker={EmojiPicker}>
-        <Window>
-          <CustomChannelHeader />
-          <CustomMessageList />
-          <CustomMessageInput />
-        </Window>
-        <Thread />
-      </Channel>
+      <WorkspaceNavigationProvider value={navigation}>
+        <WithComponents
+          overrides={{
+            ChannelListItemUI: CustomChannelPreview, // Use our custom preview component
+            FirstPageLoadingIndicator: ListLoadingSkeleton, // Use Shadcn Skeleton
+            EmptyListIndicator: () => (
+              <div className='p-4'>No channels found</div>
+            ),
+          }}
+        >
+          <aside className='my-channel-list'>
+            <CustomListContainer paginator={paginator}>
+              <ChannelList paginator={paginator} />
+            </CustomListContainer>
+          </aside>
+        </WithComponents>
+        {activeChannel ? (
+          <Channel channel={activeChannel}>
+            <CustomChannelHeader />
+            <CustomMessageList />
+            <CustomMessageInput />
+          </Channel>
+        ) : (
+          <ChannelPlaceholder>
+            <div className='flex h-full items-center justify-center text-sm text-muted-foreground'>
+              Select a channel to start chatting
+            </div>
+          </ChannelPlaceholder>
+        )}
+      </WorkspaceNavigationProvider>
     </Chat>
   );
 }

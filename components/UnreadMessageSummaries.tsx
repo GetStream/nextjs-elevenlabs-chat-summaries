@@ -28,15 +28,11 @@ import {
 } from '@/components/ui/table';
 import { TextToSpeechRequest, Voice } from 'elevenlabs/api';
 import { useSpeech } from '@/app/hooks/use-speech';
-import { Channel, OwnUserResponse, UserResponse } from 'stream-chat';
-import { DefaultStreamChatGenerics } from 'stream-chat-react';
+import type { Channel, ClientUser } from 'stream-chat';
 
 type UnreadMessageSummariesProps = {
   loadedChannels: Channel[];
-  user:
-    | OwnUserResponse<DefaultStreamChatGenerics>
-    | UserResponse<DefaultStreamChatGenerics>
-    | undefined;
+  user: ClientUser | undefined;
 };
 
 export default function UnreadMessageSummaries({
@@ -115,7 +111,8 @@ export default function UnreadMessageSummaries({
 
                   const placeHolderSummaries = channelsWithUnread.map(
                     (channel) => ({
-                      channelName: channel.data?.name || 'Unnamed Channel',
+                      channelName:
+                        channel.data?.custom?.name || 'Unnamed Channel',
                       summary: '',
                     })
                   );
@@ -242,35 +239,37 @@ export default function UnreadMessageSummaries({
     summary: string;
   }> {
     console.log(
-      `Getting summary for ${channel.data?.name} with body: ${JSON.stringify({
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are handed messages from a chat channel. Please summarize them and ensure no context misses. If important also name the people involved and what their intentions and/or questions have been.',
-          },
-          {
-            role: 'user',
-            content: `Unread messages: ${getUnreadMessages(channel)}`,
-          },
-        ],
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'summary_response',
-            strict: 'true',
-            schema: {
-              type: 'object',
-              properties: {
-                summary: {
-                  type: 'string',
+      `Getting summary for ${channel.data?.custom?.name} with body: ${JSON.stringify(
+        {
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are handed messages from a chat channel. Please summarize them and ensure no context misses. If important also name the people involved and what their intentions and/or questions have been.',
+            },
+            {
+              role: 'user',
+              content: `Unread messages: ${getUnreadMessages(channel)}`,
+            },
+          ],
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'summary_response',
+              strict: 'true',
+              schema: {
+                type: 'object',
+                properties: {
+                  summary: {
+                    type: 'string',
+                  },
                 },
+                required: ['summary'],
               },
-              required: ['summary'],
             },
           },
-        },
-      })}`
+        }
+      )}`
     );
     const response = await fetch('http://127.0.0.1:1234/v1/chat/completions', {
       method: 'POST',
@@ -309,20 +308,22 @@ export default function UnreadMessageSummaries({
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch summary for ${channel.data?.name}`);
+      throw new Error(
+        `Failed to fetch summary for ${channel.data?.custom?.name}`
+      );
     }
 
     const data = await response.json();
     const content = JSON.parse(data.choices[0].message.content);
     console.log('content: ', content);
     return {
-      channelName: channel.data?.name || 'Unnamed Channel',
+      channelName: channel.data?.custom?.name || 'Unnamed Channel',
       summary: content['summary'],
     };
   }
 
   function getUnreadMessages(channel: Channel): string[] {
-    const messages = channel.state.messages;
+    const messages = channel.messagePaginator.items ?? [];
     const numberOfUnreadMessages =
       channel.state.read[user?.id as string].unread_messages;
     return messages
