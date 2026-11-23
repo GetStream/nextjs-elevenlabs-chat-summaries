@@ -1,22 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  useChannelStateContext,
-  // Try importing StreamMessage directly
-  StreamMessage,
-  useChatContext, // Import useChatContext to get the current user ID
-} from 'stream-chat-react';
-// import type { MessageResponse } from 'stream-chat'; // Keep commented for now
+  nsToDate,
+  type LocalMessage,
+  type MessagePaginatorState,
+} from 'stream-chat';
+import { useChannel, useChatContext, useStateStore } from 'stream-chat-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils'; // Assuming you have a utility for classnames
 
-// Remove the inferred type definition
-// type StreamMessageType = ReturnType<typeof useChannelStateContext>['messages'][number];
-
 interface CustomMessageProps {
-  // Use the imported StreamMessage type
-  message: StreamMessage;
+  message: LocalMessage;
 }
 
 // Function to get initials from name (can be moved to utils)
@@ -68,7 +63,7 @@ const CustomMessage: React.FC<CustomMessageProps> = ({ message }) => {
           )}
         >
           {message.created_at
-            ? new Date(message.created_at).toLocaleTimeString([], {
+            ? nsToDate(message.created_at).toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit',
               })
@@ -86,9 +81,47 @@ const CustomMessage: React.FC<CustomMessageProps> = ({ message }) => {
   );
 };
 
+// The channel's messages live in its message paginator (stream-chat).
+// Defined at module scope so the selector stays referentially stable.
+const messagePaginatorSelector = (state: MessagePaginatorState) => ({
+  messages: state.items,
+  loading: state.isLoading,
+});
+
 const CustomMessageList: React.FC = () => {
-  const { messages, loading } = useChannelStateContext();
+  const channel = useChannel();
+  const { messages, loading } = useStateStore(
+    channel.messagePaginator.state,
+    messagePaginatorSelector
+  );
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Mark the channel read while it is open and the tab is visible: when it is
+  // opened, when a new message arrives and when the tab becomes visible again.
+  // While the tab is visible the channel counts as "viewing live", so the LLC
+  // does not bump the own unread count on message.new (no badge/button flash).
+  useEffect(() => {
+    const client = channel.getClient();
+    const markReadIfVisible = () => {
+      const visible = document.visibilityState === 'visible';
+      channel.messagePaginator.setViewingLive(visible);
+      if (!visible) return;
+      const userId = client.userId;
+      const latest = channel.messagePaginator.latestMessage;
+      if (!userId || !latest || latest.user?.id === userId) return;
+      if (channel.state.read[userId]?.last_read_message_id === latest.id) return;
+      client.messageDeliveryReporter.throttledMarkRead(channel);
+    };
+
+    markReadIfVisible();
+    const subscription = channel.on('message.new', markReadIfVisible);
+    document.addEventListener('visibilitychange', markReadIfVisible);
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', markReadIfVisible);
+      channel.messagePaginator.setViewingLive(false);
+    };
+  }, [channel]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {

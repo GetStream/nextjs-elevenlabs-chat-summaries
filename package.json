@@ -15,6 +15,7 @@
     "@radix-ui/react-avatar": "^1.1.7",
     "@radix-ui/react-scroll-area": "^1.2.6",
     "@radix-ui/react-slot": "^1.2.0",
+    "@stream-io/node-sdk": "^0.9.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^16.5.0",
@@ -23,8 +24,8 @@
     "next": "15.3.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "stream-chat": "^8.60.0",
-    "stream-chat-react": "^12.14.0",
+    "stream-chat": "^10.2.0",
+    "stream-chat-react": "^15.0.2",
     "tailwind-merge": "^3.2.0"
   },
   "devDependencies": {
